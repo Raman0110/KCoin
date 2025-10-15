@@ -1,13 +1,18 @@
 import { AppDataSource } from "./config/db.config";
 import express from "express";
 import userRouter from "./modules/user/user.routes";
+import blockRouter from "./modules/block/block.routes";
+import transactionRouter from "./modules/transaction/transaction.route";
 import cookieParser from "cookie-parser";
 
 const app = express();
 
 app.use(express.json());
 app.use(cookieParser());
+
 app.use("/user", userRouter);
+app.use("/block", blockRouter);
+app.use("/transactions", transactionRouter);
 
 const PORT = process.env.PORT;
 

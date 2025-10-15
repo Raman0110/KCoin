@@ -3,6 +3,7 @@ import { AppDataSource } from "../../config/db.config";
 import { User } from "./user.entity";
 import { randomUUID } from "crypto";
 import jwt from "jsonwebtoken";
+import { BlockService } from "../block/block.service";
 
 type createUserDto = {
   email: string,
@@ -11,6 +12,7 @@ type createUserDto = {
 
 
 export class UserService {
+  private blockService = new BlockService();
   private readonly userRepo = AppDataSource.getRepository(User);
 
   async createUser(userPayload: createUserDto) {
@@ -52,5 +54,15 @@ export class UserService {
     const { password: _, ...userDetails } = user;
     const token = await jwt.sign(userDetails, `${process.env.JWT_SECRET}`, { expiresIn: '1h' });
     return token;
+  }
+
+  async getWallet(user: Partial<User>) {
+    if (!user) throw new Error("User details not found")
+
+    const userBalance = await this.blockService.calculateBalance(user.walletAddress as string);
+    return {
+      walletAddress: user.walletAddress,
+      balance: userBalance
+    }
   }
 }

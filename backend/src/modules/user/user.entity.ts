@@ -13,11 +13,8 @@ export class User {
   @Column()
   password: string
 
-  @Column("uuid", { unique: true })
+  @Column({ type: "varchar", unique: true })
   walletAddress: string
-
-  @Column("decimal", { default: 0 })
-  balance: number;
 
   @CreateDateColumn()
   createdAt: Date;
