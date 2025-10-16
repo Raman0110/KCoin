@@ -21,7 +21,7 @@ export class TransactionController {
   getAllPendingTransaction = async (req: Request, res: Response) => {
     try {
       const pendingTransactions = await this.transactionService.getAllPendingTransaction();
-      res.status(201).json({ success: true, message: "Transaction added to pending", pendingTransactions })
+      res.status(200).json({ success: true, pendingTransactions })
     } catch (error: any) {
       res.status(400).json({ success: false, message: error.message });
     }

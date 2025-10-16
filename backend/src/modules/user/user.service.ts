@@ -4,6 +4,7 @@ import { User } from "./user.entity";
 import { randomUUID } from "crypto";
 import jwt from "jsonwebtoken";
 import { BlockService } from "../block/block.service";
+import { PendingTransactionService } from "../pendingTransaction/pendingTransaction.service";
 
 type createUserDto = {
   email: string,
@@ -13,6 +14,7 @@ type createUserDto = {
 
 export class UserService {
   private blockService = new BlockService();
+  private pendingTransactionService = new PendingTransactionService();
   private readonly userRepo = AppDataSource.getRepository(User);
 
   async createUser(userPayload: createUserDto) {
@@ -59,7 +61,11 @@ export class UserService {
   async getWallet(user: Partial<User>) {
     if (!user) throw new Error("User details not found")
 
-    const userBalance = await this.blockService.calculateBalance(user.walletAddress as string);
+    let userBalance = await this.blockService.calculateBalance(user.walletAddress as string);
+    const userPendingTransactions = await this.pendingTransactionService.pendingTransactionCurrentUser(user.walletAddress as string);
+    if (userPendingTransactions) {
+      userBalance -= userPendingTransactions
+    }
     return {
       walletAddress: user.walletAddress,
       balance: userBalance

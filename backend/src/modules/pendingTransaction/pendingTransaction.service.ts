@@ -30,4 +30,12 @@ export class PendingTransactionService {
     await this.pendingTransactionRepo.clear();
     return { success: true, message: "All pending transactions deleted" };
   };
+
+  pendingTransactionCurrentUser = async (walletAddress: string) => {
+    const pendingTransaction = await this.pendingTransactionRepo.findOne({ where: { senderAddress: walletAddress } });
+
+    if (!pendingTransaction) return false;
+
+    return pendingTransaction.amount
+  }
 }

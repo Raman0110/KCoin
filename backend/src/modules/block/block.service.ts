@@ -2,7 +2,7 @@ import { AppDataSource } from "../../config/db.config";
 import { PendingTransactionService } from "../pendingTransaction/pendingTransaction.service";
 import { Transaction } from "../transaction/transaction.entity";
 import { Block } from "./block.entity";
-import crypto, { UUID } from "crypto";
+import crypto from "crypto";
 
 type blockToHash = {
   index: number,
@@ -16,7 +16,7 @@ type blockToHash = {
 export class BlockService {
   private blockRepo = AppDataSource.getRepository(Block);
   private transactionRepo = AppDataSource.getRepository(Transaction);
-  private static pendingTransactions: Transaction[] = [];
+  private pendingTransactionService = new PendingTransactionService();
 
   private calculateHash(block: blockToHash) {
     const { index, previousHash, timestamp, transactions, nonce } = block;
@@ -36,15 +36,17 @@ export class BlockService {
   mineBlock = async (minerAddress: string) => {
     if (!minerAddress) throw new Error("Miner address required");
 
-    if (BlockService.pendingTransactions.length === 0) throw new Error("No pending transactions to mine");
+    const pendingTransactions = await this.pendingTransactionService.getAllPendingTransaction();
+    if (!pendingTransactions || pendingTransactions.length === 0) throw new Error("No pending transactions to mine");
 
-    const mineReward = this.transactionRepo.create({
+    const coinbaseTransaction = this.transactionRepo.create({
       senderAddress: "00",
       recipientAddress: minerAddress,
       amount: 10,
     })
 
-    BlockService.pendingTransactions.push(mineReward);
+    const transactionsForBlock = [...pendingTransactions, coinbaseTransaction];
+
     const chain = await this.getBlockchain();
     const lastBlock = chain[chain.length - 1];
     const previousHash = lastBlock ? lastBlock.hash : "0";
@@ -54,7 +56,7 @@ export class BlockService {
       previousHash,
       nonce: 0,
       minerAddress,
-      transactions: BlockService.pendingTransactions,
+      transactions: transactionsForBlock,
     });
 
     while (true) {
@@ -67,10 +69,9 @@ export class BlockService {
 
       newBlock.nonce++;
     }
-
     await this.blockRepo.save(newBlock);
 
-    BlockService.pendingTransactions = [];
+    await this.pendingTransactionService.emptyPendingTransaction();
 
     return newBlock;
   }
@@ -88,13 +89,11 @@ export class BlockService {
     return balance;
   }
 
-
   calculateAvailableBalance = async (walletAddress: string) => {
     let balance = await this.calculateBalance(walletAddress);
 
     // Subtract pending transactions where user is the sender
-    const pendingTransactionService = new PendingTransactionService();
-    const pendingTransactions = await pendingTransactionService.getAllPendingTransaction();
+    const pendingTransactions = await this.pendingTransactionService.getAllPendingTransaction();
 
     for (const transaction of pendingTransactions) {
       if (transaction.senderAddress === walletAddress) {
