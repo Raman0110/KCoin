@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { UserService } from "./user.service";
+import { AppError } from "../../utils/app-error";
 
 
 
@@ -14,15 +15,17 @@ export class UserController {
       res.status(201).json({
         success: true,
         message: "User Created Successfully",
-        user: user
-      })
+        user,
+      });
     } catch (error: any) {
-      res.status(400).json({
+      const statusCode = error instanceof AppError ? error.statusCode : 500;
+      res.status(statusCode).json({
         success: false,
-        message: error.message
-      })
+        message: error.message || "Internal Server Error",
+      });
     }
-  }
+  };
+
 
   loginUser = async (req: Request, res: Response) => {
     try {
@@ -39,10 +42,11 @@ export class UserController {
           message: "Login successful"
         });
     } catch (error: any) {
-      res.status(400).json({
+      const statusCode = error instanceof AppError ? error.statusCode : 500;
+      res.status(statusCode).json({
         success: false,
-        message: error.message
-      })
+        message: error.message || "Internal Server Error",
+      });
     }
   }
 
@@ -53,10 +57,11 @@ export class UserController {
 
       res.status(200).json(walletDetails);
     } catch (error: any) {
-      res.status(400).json({
+      const statusCode = error instanceof AppError ? error.statusCode : 500;
+      res.status(statusCode).json({
         success: false,
-        message: error.message
-      })
+        message: error.message || "Internal Server Error",
+      });
     }
   }
 }

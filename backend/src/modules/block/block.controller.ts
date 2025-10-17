@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { BlockService } from "./block.service";
+import { AppError } from "../../utils/app-error";
 
 
 export class BlockController {
@@ -17,7 +18,11 @@ export class BlockController {
 
       res.status(201).json({ success: true, newBlock });
     } catch (error: any) {
-      res.status(400).json({ success: false, message: error.message });
+      const statusCode = error instanceof AppError ? error.statusCode : 500;
+      res.status(statusCode).json({
+        success: false,
+        message: error.message || "Internal Server Error",
+      });
     }
   }
 }

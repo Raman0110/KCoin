@@ -1,28 +1,15 @@
 import { AppDataSource } from "../../config/db.config";
+import { AppError } from "../../utils/app-error";
+import { calculateHash } from "../../utils/hash";
 import { PendingTransactionService } from "../pendingTransaction/pendingTransaction.service";
 import { Transaction } from "../transaction/transaction.entity";
 import { Block } from "./block.entity";
-import crypto from "crypto";
-
-type blockToHash = {
-  index: number,
-  timestamp: Date,
-  transactions: Transaction[],
-  previousHash: string,
-  nonce: number
-}
 
 
 export class BlockService {
   private blockRepo = AppDataSource.getRepository(Block);
   private transactionRepo = AppDataSource.getRepository(Transaction);
   private pendingTransactionService = new PendingTransactionService();
-
-  private calculateHash(block: blockToHash) {
-    const { index, previousHash, timestamp, transactions, nonce } = block;
-    const data = index + previousHash + timestamp + JSON.stringify(transactions) + nonce;
-    return crypto.createHash("sha256").update(data).digest("hex");
-  }
 
   getBlockchain = async () => {
     const chain = await this.blockRepo.find({
@@ -34,10 +21,10 @@ export class BlockService {
   }
 
   mineBlock = async (minerAddress: string) => {
-    if (!minerAddress) throw new Error("Miner address required");
+    if (!minerAddress) throw new AppError("Miner address required");
 
     const pendingTransactions = await this.pendingTransactionService.getAllPendingTransaction();
-    if (!pendingTransactions || pendingTransactions.length === 0) throw new Error("No pending transactions to mine");
+    if (!pendingTransactions || pendingTransactions.length === 0) throw new AppError("No pending transactions to mine");
 
     const coinbaseTransaction = this.transactionRepo.create({
       senderAddress: "00",
@@ -60,7 +47,7 @@ export class BlockService {
     });
 
     while (true) {
-      const hash = this.calculateHash(newBlock);
+      const hash = calculateHash(newBlock);
 
       if (hash.startsWith("00")) {
         newBlock.hash = hash;

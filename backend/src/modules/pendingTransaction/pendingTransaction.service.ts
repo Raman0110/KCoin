@@ -1,4 +1,5 @@
 import { AppDataSource } from "../../config/db.config";
+import { AppError } from "../../utils/app-error";
 import { PendingTransaction } from "./pendingTransaction.entity";
 
 
@@ -20,7 +21,7 @@ export class PendingTransactionService {
 
   addPendingTransaction = async (transaction: CreatePendingTransactionDto) => {
     const newTransaction = this.pendingTransactionRepo.create(transaction);
-    if (!newTransaction) throw new Error("Unable to create transaction")
+    if (!newTransaction) throw new AppError("Unable to create transaction")
 
     const saved = await this.pendingTransactionRepo.save(newTransaction)
     return saved;
