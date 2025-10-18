@@ -64,4 +64,18 @@ export class UserController {
       });
     }
   }
+
+  logout = async (req: Request, res: Response) => {
+    try {
+      res.clearCookie("token", {
+        httpOnly: true,
+        secure: false,
+        sameSite: "strict",
+      });
+
+      res.status(200).json({ success: true, message: "Logged out successfully" });
+    } catch (error) {
+      res.status(500).json({ success: false, message: "Logout failed" });
+    }
+  };
 }

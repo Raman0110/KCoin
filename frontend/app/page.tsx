@@ -6,7 +6,6 @@ export default function HomePage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Redirect to login page on root access
     router.push('/login');
   }, [router]);
 

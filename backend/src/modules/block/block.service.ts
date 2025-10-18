@@ -44,6 +44,7 @@ export class BlockService {
       nonce: 0,
       minerAddress,
       transactions: transactionsForBlock,
+      timestamp: new Date()
     });
 
     while (true) {

@@ -8,6 +8,7 @@ const userController = new UserController();
 
 router.post("/register", userController.createUser)
 router.post("/login", userController.loginUser)
+router.post("/logout", userController.logout)
 router.get("/getWallet", verifyToken, userController.getWallet)
 
 export default router;

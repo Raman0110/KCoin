@@ -29,6 +29,8 @@ export default function RegisterPage() {
       } else {
         toast.error('Passwords do not match')
       }
+    } else {
+      toast.error('Please fill all details')
     }
   };
 

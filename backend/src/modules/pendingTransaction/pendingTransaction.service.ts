@@ -34,9 +34,8 @@ export class PendingTransactionService {
 
   pendingTransactionCurrentUser = async (walletAddress: string) => {
     const pendingTransaction = await this.pendingTransactionRepo.findOne({ where: { senderAddress: walletAddress } });
+    if (!pendingTransaction) return 0;
 
-    if (!pendingTransaction) return false;
-
-    return pendingTransaction.amount
+    return Number(pendingTransaction.amount)
   }
 }

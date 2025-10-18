@@ -24,8 +24,13 @@ export interface Block {
   nonce?: number;
 }
 
+export interface BlockChainResponse {
+  success: boolean,
+  chain: Block[]
+}
+
 export interface UserWallet {
-  address: string;
+  walletAddress: string;
   balance: number;
 }
 
@@ -53,6 +58,17 @@ export interface Transaction {
   recipientAddress: string;
   amount: number;
   timestamp: string;
+}
+
+export interface PendingTransaction {
+  success: boolean,
+  pendingTransactions: Transaction[]
+}
+
+export interface SendTransactionResponse {
+  success: boolean,
+  message: string
+  newTransaction: Transaction[]
 }
 
 export interface Block {

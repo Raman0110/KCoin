@@ -29,7 +29,7 @@ export class UserService {
     if (existingUser) throw new AppError("User already Exists", 400);
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const walletAddress = randomUUID();
+    const walletAddress = `KC-${randomUUID()}`;
 
     const user = this.userRepo.create({
       email, password: hashedPassword, walletAddress
@@ -60,16 +60,18 @@ export class UserService {
   }
 
   async getWallet(user: Partial<User>) {
-    if (!user) throw new AppError("User details not found", 400)
+    if (!user) throw new AppError("User details not found", 400);
 
     let userBalance = await this.blockService.calculateBalance(user.walletAddress as string);
+
     const userPendingTransactions = await this.pendingTransactionService.pendingTransactionCurrentUser(user.walletAddress as string);
-    if (userPendingTransactions) {
-      userBalance -= userPendingTransactions
+    if (userPendingTransactions && typeof userPendingTransactions === 'number') {
+      userBalance -= userPendingTransactions;
     }
+
     return {
       walletAddress: user.walletAddress,
       balance: userBalance
-    }
+    };
   }
 }

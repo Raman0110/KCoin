@@ -7,12 +7,15 @@ import type {
   Block,
   Transaction,
   UserWallet,
-  MineResponse
+  MineResponse,
+  PendingTransaction,
+  SendTransactionResponse,
+  BlockChainResponse
 } from '@/types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
-const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
+const fetchAPI = async (url: string, options: RequestInit = {}) => {
   const response = await fetch(`${API_BASE_URL}${url}`, {
     credentials: 'include',
     headers: {
@@ -38,7 +41,7 @@ const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
 
 export const authAPI = {
   login: async (data: LoginRequest): Promise<AuthResponse> => {
-    const result = await fetchWithAuth('/user/login', {
+    const result = await fetchAPI('/user/login', {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -48,7 +51,7 @@ export const authAPI = {
   },
 
   register: async (data: RegisterRequest): Promise<AuthResponse> => {
-    const result = await fetchWithAuth('/user/register', {
+    const result = await fetchAPI('/user/register', {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -58,7 +61,7 @@ export const authAPI = {
   },
 
   logout: async (): Promise<void> => {
-    await fetchWithAuth('/user/logout', {
+    await fetchAPI('/user/logout', {
       method: 'POST',
     });
   },
@@ -66,29 +69,29 @@ export const authAPI = {
 
 export const walletAPI = {
   getWallet: async (): Promise<UserWallet> => {
-    return fetchWithAuth('/wallet', { method: 'GET' });
+    return fetchAPI('/user/getWallet', { method: 'GET' });
   },
 };
 
 export const transactionAPI = {
-  createTransaction: async (data: TransactionRequest): Promise<Transaction> => {
-    return fetchWithAuth('/transactions', {
+  createTransaction: async (data: TransactionRequest): Promise<SendTransactionResponse> => {
+    return fetchAPI('/transactions', {
       method: 'POST',
       body: JSON.stringify(data),
     });
   },
 
-  getPendingTransactions: async (): Promise<Transaction[]> => {
-    return fetchWithAuth('/transactions/pending', { method: 'GET' });
+  getPendingTransactions: async (): Promise<PendingTransaction> => {
+    return fetchAPI('/transactions/pending', { method: 'GET' });
   },
 };
 
 export const blockchainAPI = {
-  getChain: async (): Promise<Block[]> => {
-    return fetchWithAuth('/chain', { method: 'GET' });
+  getChain: async (): Promise<BlockChainResponse> => {
+    return fetchAPI('/block/chain', { method: 'GET' });
   },
 
   mineBlock: async (): Promise<MineResponse> => {
-    return fetchWithAuth('/mine', { method: 'POST' });
+    return fetchAPI('/block/mine', { method: 'POST' });
   },
 };
