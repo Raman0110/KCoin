@@ -2,16 +2,24 @@
 import React, { useState } from 'react';
 import { Coins } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { authAPI } from '@/lib/api';
+import toast from 'react-hot-toast';
 
 export default function LoginPage() {
   const router = useRouter();
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (loginForm.email && loginForm.password) {
-      // TODO: Connect to POST /login endpoint
-      // For now, just redirect to dashboard
-      router.push('/dashboard');
+      try {
+        const response = await authAPI.login(loginForm);
+        if (response.success) {
+          toast.success("Login successful");
+          router.push('/dashboard');
+        }
+      } catch (error: any) {
+        toast.error(error.message)
+      }
     }
   };
 
@@ -50,7 +58,7 @@ export default function LoginPage() {
 
           <button
             onClick={handleLogin}
-            className="w-full bg-gradient-to-r from-yellow-400 to-yellow-500 text-gray-900 font-semibold py-3 rounded-lg hover:from-yellow-500 hover:to-yellow-600 transition-all transform hover:scale-105"
+            className="cursor-pointer w-full bg-gradient-to-r from-yellow-400 to-yellow-500 text-gray-900 font-semibold py-3 rounded-lg hover:from-yellow-500 hover:to-yellow-600 transition-all transform hover:scale-105"
           >
             Login
           </button>
@@ -60,7 +68,7 @@ export default function LoginPage() {
           Don't have an account?{' '}
           <button
             onClick={() => router.push('/register')}
-            className="text-yellow-400 hover:text-yellow-300 font-semibold"
+            className="cursor-pointer text-yellow-400 hover:text-yellow-300 font-semibold"
           >
             Register
           </button>

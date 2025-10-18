@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Coins } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { authAPI } from '@/lib/api';
+import toast from 'react-hot-toast';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -18,13 +19,15 @@ export default function RegisterPage() {
       if (registerForm.password === registerForm.confirmPassword) {
         try {
           const response = await authAPI.register(registerForm);
-          router.push('/login');
-          alert('User Registered Successful');
+          if (response.success) {
+            toast.success("User Registered Successful")
+            router.push('/login');
+          }
         } catch (error: any) {
-          alert(error.message)
+          toast.error(error.message)
         }
       } else {
-        alert('Passwords do not match');
+        toast.error('Passwords do not match')
       }
     }
   };
@@ -86,7 +89,7 @@ export default function RegisterPage() {
 
           <button
             onClick={handleRegister}
-            className="w-full bg-gradient-to-r from-yellow-400 to-yellow-500 text-gray-900 font-semibold py-3 rounded-lg hover:from-yellow-500 hover:to-yellow-600 transition-all transform hover:scale-105"
+            className="cursor-pointer w-full bg-gradient-to-r from-yellow-400 to-yellow-500 text-gray-900 font-semibold py-3 rounded-lg hover:from-yellow-500 hover:to-yellow-600 transition-all transform hover:scale-105"
           >
             Create Account
           </button>
@@ -96,7 +99,7 @@ export default function RegisterPage() {
           Already have an account?{' '}
           <button
             onClick={() => router.push('/login')}
-            className="text-yellow-400 hover:text-yellow-300 font-semibold"
+            className="cursor-pointer text-yellow-400 hover:text-yellow-300 font-semibold"
           >
             Login
           </button>

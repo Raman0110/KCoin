@@ -1,3 +1,4 @@
+// api/index.ts
 import type {
   LoginRequest,
   RegisterRequest,
@@ -8,95 +9,67 @@ import type {
   UserWallet,
   MineResponse
 } from '@/types';
-import { log } from 'console';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
-// Helper function to get auth token
-const getAuthToken = () => {
-  if (typeof window !== 'undefined') {
-    return localStorage.getItem('auth_token');
-  }
-  return null;
-};
-
-// Helper function to make authenticated requests
 const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
-  const token = getAuthToken();
-  const headers = {
-    'Content-Type': 'application/json',
-    ...(token && { 'Authorization': `Bearer ${token}` }),
-    ...options.headers,
-  };
-
   const response = await fetch(`${API_BASE_URL}${url}`, {
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(options.headers || {}),
+    },
     ...options,
-    headers,
   });
 
+  const text = await response.text();
+  const payload = text ? JSON.parse(text) : null;
+
   if (!response.ok) {
-    throw new Error(`API Error: ${response.statusText}`);
+    const errMessage = payload?.message || response.statusText || 'API Error';
+    const err: any = new Error(errMessage);
+    err.status = response.status;
+    err.payload = payload;
+    throw err;
   }
 
-  return response.json();
+  return payload;
 };
 
-// Authentication APIs
 export const authAPI = {
   login: async (data: LoginRequest): Promise<AuthResponse> => {
-    const response = await fetch(`${API_BASE_URL}/user/login`, {
+    const result = await fetchWithAuth('/user/login', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
 
-    if (!response.ok) {
-      throw new Error('Login failed');
-    }
-
-    const result = await response.json();
-
-    // Store token in localStorage
-    if (result.token) {
-      localStorage.setItem('auth_token', result.token);
-    }
-
-    return result;
+    if (!result.success) throw new Error(result.message || 'Login failed');
+    return result as AuthResponse;
   },
 
   register: async (data: RegisterRequest): Promise<AuthResponse> => {
-    const response = await fetch(`${API_BASE_URL}/user/register`, {
+    const result = await fetchWithAuth('/user/register', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
-    const result = await response.json();
 
-    if (!result.success) {
-      throw new Error(result.message)
-    }
-
-    // Store token in localStorage
-    if (result.token) {
-      localStorage.setItem('auth_token', result.token);
-    }
-
-    return result;
+    if (!result.success) throw new Error(result.message || 'Register failed');
+    return result as AuthResponse;
   },
 
-  logout: () => {
-    localStorage.removeItem('auth_token');
+  logout: async (): Promise<void> => {
+    await fetchWithAuth('/user/logout', {
+      method: 'POST',
+    });
   },
 };
 
-// Wallet APIs
 export const walletAPI = {
   getWallet: async (): Promise<UserWallet> => {
-    return fetchWithAuth('/wallet');
+    return fetchWithAuth('/wallet', { method: 'GET' });
   },
 };
 
-// Transaction APIs
 export const transactionAPI = {
   createTransaction: async (data: TransactionRequest): Promise<Transaction> => {
     return fetchWithAuth('/transactions', {
@@ -106,19 +79,16 @@ export const transactionAPI = {
   },
 
   getPendingTransactions: async (): Promise<Transaction[]> => {
-    return fetchWithAuth('/transactions/pending');
+    return fetchWithAuth('/transactions/pending', { method: 'GET' });
   },
 };
 
-// Blockchain APIs
 export const blockchainAPI = {
   getChain: async (): Promise<Block[]> => {
-    return fetchWithAuth('/chain');
+    return fetchWithAuth('/chain', { method: 'GET' });
   },
 
   mineBlock: async (): Promise<MineResponse> => {
-    return fetchWithAuth('/mine', {
-      method: 'POST',
-    });
+    return fetchWithAuth('/mine', { method: 'POST' });
   },
 };

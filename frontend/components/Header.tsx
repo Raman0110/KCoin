@@ -8,7 +8,6 @@ export default function Header() {
   const pathname = usePathname();
 
   const handleLogout = () => {
-    // TODO: Clear authentication token/session
     router.push('/login');
   };
 
