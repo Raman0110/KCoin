@@ -1,16 +1,12 @@
 import { AppDataSource } from "../../config/db.config";
 import { AppError } from "../../utils/app-error";
 import { PendingTransaction } from "./pendingTransaction.entity";
+import { CreatePendingTransactionDto } from "./pendingTransaction.types";
 
 
-export type CreatePendingTransactionDto = {
-  senderAddress: string;
-  recipientAddress: string;
-  amount: number;
-};
 
 export class PendingTransactionService {
-  private pendingTransactionRepo = AppDataSource.getRepository(PendingTransaction)
+  private readonly pendingTransactionRepo = AppDataSource.getRepository(PendingTransaction)
 
   getAllPendingTransaction = async () => {
     const pendingTransactions = await this.pendingTransactionRepo.find({
@@ -33,9 +29,15 @@ export class PendingTransactionService {
   };
 
   pendingTransactionCurrentUser = async (walletAddress: string) => {
-    const pendingTransaction = await this.pendingTransactionRepo.findOne({ where: { senderAddress: walletAddress } });
+    const pendingTransaction = await this.pendingTransactionRepo.find({ where: { senderAddress: walletAddress } });
+    const totalPendingAmount = pendingTransaction.reduce((sum, transaction) => sum + Number(transaction.amount), 0)
     if (!pendingTransaction) return 0;
 
-    return Number(pendingTransaction.amount)
+    return totalPendingAmount;
+  }
+
+  getPendingTransactionCount = async () => {
+    const count = await this.pendingTransactionRepo.count();
+    return count;
   }
 }

@@ -14,11 +14,11 @@ type createUserDto = {
 
 
 export class UserService {
-  private blockService = new BlockService();
-  private pendingTransactionService = new PendingTransactionService();
+  private readonly blockService = new BlockService();
+  private readonly pendingTransactionService = new PendingTransactionService();
   private readonly userRepo = AppDataSource.getRepository(User);
 
-  async createUser(userPayload: createUserDto) {
+  createUser = async (userPayload: createUserDto) => {
     if (!userPayload) throw new AppError("Email and Password is missing", 400);
 
     const { email, password } = userPayload;
@@ -42,7 +42,7 @@ export class UserService {
     return newUser
   }
 
-  async loginUser(loginPayload: createUserDto) {
+  loginUser = async (loginPayload: createUserDto) => {
     if (!loginPayload) throw new AppError("Email and Password is missing", 400)
 
     const { email, password } = loginPayload;
@@ -59,7 +59,7 @@ export class UserService {
     return token;
   }
 
-  async getWallet(user: Partial<User>) {
+  getWallet = async (user: Partial<User>) => {
     if (!user) throw new AppError("User details not found", 400);
 
     let userBalance = await this.blockService.calculateBalance(user.walletAddress as string);
@@ -73,5 +73,11 @@ export class UserService {
       walletAddress: user.walletAddress,
       balance: userBalance
     };
+  }
+
+  getDashboardStat = async () => {
+    const totalPendingTransaction = await this.pendingTransactionService.getPendingTransactionCount();
+    const totalBlocks = await this.blockService.getBlockChainCount();
+    return { totalPendingTransaction, totalBlocks }
   }
 }

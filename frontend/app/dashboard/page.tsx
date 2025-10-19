@@ -2,23 +2,20 @@
 import React, { useEffect, useState } from 'react';
 import { Wallet, TrendingUp, ArrowRight, Copy, CheckCircle, Coins } from 'lucide-react';
 import Header from '@/components/Header';
-import { transactionAPI, walletAPI } from '@/lib/api';
+import { authAPI, transactionAPI, walletAPI } from '@/lib/api';
 import toast from 'react-hot-toast';
-import { UserWallet } from '@/types';
+import { DashboardStat, UserWallet } from '@/types';
 import CoinLoader from '@/components/CoinLoader';
 
-
-const mockStats = {
-  totalBlocks: 3,
-  pendingTransactions: 1,
-  miningReward: 10
-};
 
 export default function DashboardPage() {
   const [copiedAddress, setCopiedAddress] = useState(false);
   const [sendForm, setSendForm] = useState({ recipientAddress: '', amount: '' });
   const [walletDetail, setWalletDetail] = useState<UserWallet | null>(null);
+  const [dashboardDetail, setDashboardDetail] = useState<DashboardStat | null>(null);
   const [triggerFetch, setTriggerFetch] = useState(0);
+  const [isSending, setIsSending] = useState(false);
+
 
   const copyAddress = () => {
     navigator.clipboard.writeText(walletDetail?.walletAddress as string);
@@ -26,7 +23,9 @@ export default function DashboardPage() {
     setTimeout(() => setCopiedAddress(false), 2000);
   };
 
-  const handleSendTransaction = async () => {
+  async function handleSendTransaction() {
+    if (isSending) return;
+    setIsSending(true);
     if (sendForm.recipientAddress === walletDetail?.walletAddress)
       return toast.error("You cannot send KCoin to your own wallet address")
 
@@ -40,6 +39,8 @@ export default function DashboardPage() {
         }
       } catch (error: any) {
         toast.error(error.message)
+      } finally {
+        setIsSending(false);
       }
     } else {
       toast.error("Enter wallet address and amount")
@@ -55,14 +56,24 @@ export default function DashboardPage() {
     }
   }
 
+  async function getDashboardData() {
+    try {
+      const dashboardDetail = await authAPI.getDashboardData();
+      setDashboardDetail(dashboardDetail)
+    } catch (error: any) {
+      toast.error(error.message);
+    }
+  }
+
   useEffect(() => {
     getWalletDetails();
+    getDashboardData();
   }, [triggerFetch])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-black">
       <Header />
-      <CoinLoader show={!walletDetail} />
+      <CoinLoader show={!walletDetail || !dashboardDetail} />
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           {/* Wallet Info */}
@@ -107,17 +118,17 @@ export default function DashboardPage() {
             <div className="space-y-4">
               <div>
                 <p className="text-white/60 text-sm">Total Blocks</p>
-                <p className="text-2xl font-bold text-white">{mockStats.totalBlocks}</p>
+                <p className="text-2xl font-bold text-white">{dashboardDetail?.totalBlocks}</p>
               </div>
 
               <div>
                 <p className="text-white/60 text-sm">Pending Transactions</p>
-                <p className="text-2xl font-bold text-white">{mockStats.pendingTransactions}</p>
+                <p className="text-2xl font-bold text-white">{dashboardDetail?.totalPendingTransaction}</p>
               </div>
 
               <div>
                 <p className="text-white/60 text-sm">Mining Reward</p>
-                <p className="text-2xl font-bold text-yellow-400">{mockStats.miningReward} KC</p>
+                <p className="text-2xl font-bold text-yellow-400">10 KC</p>
               </div>
             </div>
           </div>
@@ -152,8 +163,9 @@ export default function DashboardPage() {
             </div>
 
             <button
+              disabled={isSending}
               onClick={handleSendTransaction}
-              className="cursor-pointer bg-gradient-to-r from-yellow-400 to-yellow-500 text-gray-900 font-semibold px-6 py-3 rounded-lg hover:from-yellow-500 hover:to-yellow-600 transition-all transform hover:scale-105 flex items-center gap-2"
+              className="cursor-pointer bg-gradient-to-r from-yellow-400 to-yellow-500 text-gray-900 font-semibold px-6 py-3 rounded-lg hover:from-yellow-500 hover:to-yellow-600 transition-all transform hover:scale-105 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             >
               Send Transaction
               <ArrowRight className="w-5 h-5" />

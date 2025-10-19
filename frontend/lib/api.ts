@@ -65,6 +65,10 @@ export const authAPI = {
       method: 'POST',
     });
   },
+
+  getDashboardData: async () => {
+    return fetchAPI('/user/getDashboard', { method: 'GET' });
+  },
 };
 
 export const walletAPI = {

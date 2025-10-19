@@ -34,6 +34,11 @@ export interface UserWallet {
   balance: number;
 }
 
+export interface DashboardStat {
+  totalPendingTransaction: number,
+  totalBlocks: number
+}
+
 export interface User {
   id: string;
   email: string;

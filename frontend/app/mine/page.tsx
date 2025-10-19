@@ -15,7 +15,7 @@ export default function MinePage() {
   const progressRef = useRef<number | null>(null);
   const intervalRef = useRef<number | null>(null);
 
-  const MINING_DURATION = 6000;
+  const MINING_DURATION = 4000;
 
   async function getPendingTransactions() {
     try {

@@ -1,11 +1,12 @@
 import { Request, Response } from "express";
 import { UserService } from "./user.service";
 import { AppError } from "../../utils/app-error";
+import { AuthenticatedRequest } from "../block/block.types";
 
 
 
 export class UserController {
-  private userService = new UserService();
+  constructor(private userService: UserService) { }
 
   createUser = async (req: Request, res: Response) => {
     try {
@@ -50,9 +51,13 @@ export class UserController {
     }
   }
 
-  getWallet = async (req: Request, res: Response) => {
+  getWallet = async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const user = (req as any).user;
+      const user = req.user;
+      if (!user) {
+        throw new AppError('Authentication required', 401);
+      }
+
       const walletDetails = await this.userService.getWallet(user);
 
       res.status(200).json(walletDetails);
@@ -78,4 +83,17 @@ export class UserController {
       res.status(500).json({ success: false, message: "Logout failed" });
     }
   };
+
+  getDashboardStat = async (req: Request, res: Response) => {
+    try {
+      const { totalPendingTransaction, totalBlocks } = await this.userService.getDashboardStat();
+      res.status(200).json({
+        success: true,
+        totalPendingTransaction,
+        totalBlocks
+      })
+    } catch (error) {
+      res.status(500).json({ success: false, message: "Unable to fetch" });
+    }
+  }
 }

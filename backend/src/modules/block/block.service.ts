@@ -7,9 +7,9 @@ import { Block } from "./block.entity";
 
 
 export class BlockService {
-  private blockRepo = AppDataSource.getRepository(Block);
-  private transactionRepo = AppDataSource.getRepository(Transaction);
-  private pendingTransactionService = new PendingTransactionService();
+  private readonly blockRepo = AppDataSource.getRepository(Block);
+  private readonly transactionRepo = AppDataSource.getRepository(Transaction);
+  private readonly pendingTransactionService = new PendingTransactionService();
 
   getBlockchain = async () => {
     const chain = await this.blockRepo.find({
@@ -91,4 +91,10 @@ export class BlockService {
 
     return balance;
   }
+
+  getBlockChainCount = async () => {
+    const count = await this.blockRepo.count();
+    return count;
+  }
 }
+

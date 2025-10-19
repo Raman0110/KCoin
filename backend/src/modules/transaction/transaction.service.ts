@@ -1,16 +1,17 @@
 import { AppDataSource } from "../../config/db.config";
 import { AppError } from "../../utils/app-error";
 import { BlockService } from "../block/block.service";
-import { CreatePendingTransactionDto, PendingTransactionService } from "../pendingTransaction/pendingTransaction.service";
+import { PendingTransactionService } from "../pendingTransaction/pendingTransaction.service";
+import { CreatePendingTransactionDto } from "../pendingTransaction/pendingTransaction.types";
 import { User } from "../user/user.entity";
 
 
 export class TransactionService {
-  private blockService = new BlockService();
-  private pendingTransactionService = new PendingTransactionService();
-  private userRepo = AppDataSource.getRepository(User)
+  private readonly blockService = new BlockService();
+  private readonly pendingTransactionService = new PendingTransactionService();
+  private readonly userRepo = AppDataSource.getRepository(User)
 
-  async postTransaction(sentKcoin: CreatePendingTransactionDto) {
+  postTransaction = async (sentKcoin: CreatePendingTransactionDto) => {
     if (!sentKcoin.senderAddress || !sentKcoin.recipientAddress) {
       throw new AppError("Sender and recipient addresses are required");
     }
@@ -33,7 +34,7 @@ export class TransactionService {
     return response;
   }
 
-  async getAllPendingTransaction() {
+  getAllPendingTransaction = async () => {
     const pendingTransaction = await this.pendingTransactionService.getAllPendingTransaction();
     if (!pendingTransaction) throw new AppError("No pending transactions")
 
