@@ -1,0 +1,289 @@
+# KCoin Blockchain Application
+
+## Project Overview
+
+KCoin is a blockchain-based cryptocurrency application that allows users to:
+- Create and manage wallets
+- Send and receive KCoins
+- Mine blocks to validate pending transactions
+- View blockchain history and dashboard statistics
+
+## Architecture & Design Decisions
+
+### Backend Architecture
+
+**1. Layered Architecture Pattern**
+- **Routes Layer**: Handles HTTP routing and request mapping
+- **Controller Layer**: Processes requests and responses
+- **Service Layer**: Contains business logic
+- **Repository Layer**: Database interactions via TypeORM
+
+**2. Dependency Injection**
+- Controllers receive service instances through constructor injection
+- Services are instantiated at the route level
+
+**3. TypeORM for Database Management**
+- Entity-based ORM for type-safe database operations
+- Automatic migrations and schema synchronization
+
+
+### Key Assumptions
+
+**1. Simplified Blockchain Model**
+- No peer-to-peer network implementation (centralized database)
+- Block mining is synchronous
+- Difficulty adjustment is based on blockchain length only
+
+**2. Transaction Model**
+- Pending transactions are stored in a separate table
+- Coinbase reward is fixed at 10 KCoins per mined block
+- No transaction fees implemented
+
+**3. Security**
+- JWT-based authentication with 1-hour expiration
+- Passwords hashed with bcrypt (10 salt rounds)
+- CORS restricted to localhost:3000
+
+**4. Balance Calculation**
+- Balance calculated by iterating through all blocks
+- Available balance considers pending transactions to prevent double-spending
+
+### Technology Choices
+
+**Backend Stack**:
+- **Express.js**: Lightweight and flexible web framework
+- **TypeORM**: Type-safe ORM with excellent TypeScript support
+- **PostgreSQL**: Relational database for data integrity
+- **JWT**: Stateless authentication mechanism
+
+
+## Prerequisites
+
+Ensure you have the following installed:
+
+- **Node.js**
+- **npm**
+- **PostgreSQL**
+- **Git**
+
+## Backend Setup
+
+### 1. Clone the Repository
+
+```bash
+git clone <repository-url>
+cd kcoin
+```
+
+### 2. Install Dependencies
+
+```bash
+npm install
+```
+
+### 3. Environment Configuration
+
+Create a `.env` file in the root directory:
+
+```env
+# Server Configuration
+PORT=5000
+NODE_ENV=development
+
+# Database Configuration (PostgreSQL)
+DATABASE_URL=postgres://DBusername:DBpassword@DBhost:DBport/DBname
+
+# JWT Secret
+JWT_SECRET=your_secret_key
+
+# CORS Origin
+CORS_ORIGIN=http://localhost:3000
+```
+
+### 4. Database Setup
+
+**For PostgreSQL**:
+```bash
+# Login to PostgreSQL
+psql -U postgres
+
+# Create database
+CREATE DATABASE kcoin;
+
+# Exit
+\q
+```
+
+### 5. Update Database Configuration (only if necessary)
+
+Edit `src/config/db.config.ts` to match your database type and credentials:
+
+```typescript
+export const AppDataSource = new DataSource({
+  type: "postgres",
+  url: process.env.DATABASE_URL,
+  synchronize: true,
+  logging: false,
+  entities: [User, Transaction, Block, PendingTransaction]
+})
+```
+
+### 6. Run the Backend
+
+```bash
+npm run dev
+```
+
+The backend server will start at `http://localhost:5000`
+
+## Frontend Setup
+
+### 1. Navigate to Frontend Directory
+
+```bash
+cd frontend
+```
+
+### 2. Install Dependencies
+
+```bash
+npm install
+```
+
+### 3. Environment Configuration
+
+Create a `.env` file in the frontend directory:
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:5000
+```
+
+### 4. Run the Frontend
+
+**Development mode**:
+```bash
+npm start
+# OR for Next.js
+npm run dev
+```
+
+The frontend will start at `http://localhost:3000`
+
+
+### First-Time Setup
+
+1. Open `http://localhost:3000` in your browser
+2. Register a new user account
+3. Login with your credentials
+4. Your wallet will be automatically created with a unique address
+5. To receive KCoins, mine a block (you'll receive 10 KCoins as coinbase reward)
+
+## API Documentation
+
+### Authentication Endpoints
+
+#### Register User
+```
+POST /user/register
+{
+  "email": "user@example.com",
+  "password": "securepassword"
+}
+```
+
+#### Login
+```
+POST /user/login
+{
+  "email": "user@example.com",
+  "password": "securepassword"
+}
+```
+
+#### Logout
+```
+POST /user/logout
+```
+
+### Wallet Endpoints
+
+#### Get Wallet Details
+```
+GET /user/getWallet
+```
+
+#### Get Dashboard Statistics
+```
+GET /user/getDashboard
+```
+
+### Transaction Endpoints (Authenticated required login)
+
+#### Create Transaction
+```
+POST /transactions
+{
+  "senderAddress": "KC-uuid",
+  "recipientAddress": "KC-uuid",
+  "amount": 5
+}
+```
+
+#### Get Pending Transactions
+```
+GET /transactions/pending
+```
+
+### Blockchain Endpoints (Authenticated required login)
+
+#### Get Blockchain
+```
+GET /block/chain
+```
+
+#### Mine Block
+```
+POST /block/mine
+{
+  "minerAddress": "KC-uuid"
+}
+```
+
+## Project Structure
+
+```
+kcoin-blockchain/
+├── src/
+│   ├── config/
+│   │   └── db.config.ts          # Database configuration
+│   ├── middleware/
+│   │   └── verifyToken.middleware.ts  # JWT authentication
+│   ├── modules/
+│   │   ├── user/
+│   │   │   ├── user.entity.ts
+│   │   │   ├── user.service.ts
+│   │   │   ├── user.controller.ts
+│   │   │   └── user.routes.ts
+│   │   ├── block/
+│   │   │   ├── block.entity.ts
+│   │   │   ├── block.service.ts
+│   │   │   ├── block.controller.ts
+│   │   │   └── block.routes.ts
+│   │   ├── transaction/
+│   │   │   ├── transaction.entity.ts
+│   │   │   ├── transaction.service.ts
+│   │   │   ├── transaction.controller.ts
+│   │   │   └── transaction.route.ts
+│   │   └── pendingTransaction/
+│   │       ├── pendingTransaction.entity.ts
+│   │       └── pendingTransaction.service.ts
+│   ├── utils/
+│   │   ├── hash.ts               # utilities
+│   │   ├── calculate-difficulty.ts
+│   │   └── app-error.ts
+│   └── app.ts                    # Application entry point
+├── .env
+├── package.json
+├── tsconfig.json
+└── README.md
+```
