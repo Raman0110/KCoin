@@ -9,7 +9,7 @@ import cors from 'cors';
 const app = express();
 
 const corsOptions = {
-  origin: ['http://localhost:3000'],
+  origin: [process.env.CORS_ORIGIN as string],
   credentials: true,
 };
 app.use(cors(corsOptions));
@@ -26,7 +26,7 @@ const PORT = process.env.PORT;
 AppDataSource.initialize()
   .then(() => {
     app.listen(PORT, () => {
-      console.log(`=>Server running on PORT:${PORT}`);
+      console.log(`=>Server running: http://localhost:${PORT}`);
     })
   })
   .catch((err) => {

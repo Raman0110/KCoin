@@ -1,5 +1,6 @@
 import { AppDataSource } from "../../config/db.config";
 import { AppError } from "../../utils/app-error";
+import { calculateDifficulty, getDifficultyTarget } from "../../utils/calculate-difficulty";
 import { calculateHash } from "../../utils/hash";
 import { PendingTransactionService } from "../pendingTransaction/pendingTransaction.service";
 import { Transaction } from "../transaction/transaction.entity";
@@ -38,6 +39,9 @@ export class BlockService {
     const lastBlock = chain[chain.length - 1];
     const previousHash = lastBlock ? lastBlock.hash : "0";
 
+    const difficulty = calculateDifficulty(chain.length);
+    const difficultyTarget = getDifficultyTarget(difficulty);
+
     const newBlock = this.blockRepo.create({
       index: chain.length,
       previousHash,
@@ -50,7 +54,7 @@ export class BlockService {
     while (true) {
       const hash = calculateHash(newBlock);
 
-      if (hash.startsWith("00")) {
+      if (hash.startsWith(difficultyTarget)) {
         newBlock.hash = hash;
         break;
       }
