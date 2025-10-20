@@ -4,8 +4,6 @@ import type {
   RegisterRequest,
   TransactionRequest,
   AuthResponse,
-  Block,
-  Transaction,
   UserWallet,
   MineResponse,
   PendingTransaction,

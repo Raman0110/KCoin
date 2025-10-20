@@ -83,12 +83,7 @@ export class UserService {
   getWallet = async (user: Partial<User>) => {
     if (!user) throw new AppError("User details not found", 400);
 
-    let userBalance = await this.blockService.calculateBalance(user.walletAddress as string);
-
-    const userPendingTransactions = await this.pendingTransactionService.pendingTransactionCurrentUser(user.walletAddress as string);
-    if (userPendingTransactions && typeof userPendingTransactions === 'number') {
-      userBalance -= userPendingTransactions;
-    }
+    let userBalance = await this.blockService.calculateAvailableBalance(user.walletAddress as string);
 
     return {
       walletAddress: user.walletAddress,
