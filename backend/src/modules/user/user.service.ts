@@ -12,11 +12,13 @@ type createUserDto = {
   password: string
 }
 
-
 export class UserService {
   private readonly blockService = new BlockService();
   private readonly pendingTransactionService = new PendingTransactionService();
   private readonly userRepo = AppDataSource.getRepository(User);
+
+  private readonly GENESIS_AMOUNT = 5;
+  private readonly SYSTEM_ADDRESS = "00";
 
   createUser = async (userPayload: createUserDto) => {
     if (!userPayload) throw new AppError("Email and Password is missing", 400);
@@ -37,9 +39,28 @@ export class UserService {
 
     await this.userRepo.save(user);
 
+    const totalUser = await this.userRepo.count();
+
+    if (totalUser === 1) {
+      await this.initializeNewUser(walletAddress);
+    }
+
     const { password: _, ...newUser } = user;
 
     return newUser
+  }
+
+
+  private initializeNewUser = async (walletAddress: string) => {
+    try {
+      await this.pendingTransactionService.addPendingTransaction({
+        senderAddress: this.SYSTEM_ADDRESS,
+        recipientAddress: walletAddress,
+        amount: this.GENESIS_AMOUNT,
+      });
+    } catch (error) {
+      console.error("Failed to create genesis transaction:", error);
+    }
   }
 
   loginUser = async (loginPayload: createUserDto) => {

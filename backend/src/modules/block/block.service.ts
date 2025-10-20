@@ -84,7 +84,6 @@ export class BlockService {
   calculateAvailableBalance = async (walletAddress: string) => {
     let balance = await this.calculateBalance(walletAddress);
 
-    // Subtract pending transactions where user is the sender
     const pendingTransactions = await this.pendingTransactionService.getAllPendingTransaction();
 
     for (const transaction of pendingTransactions) {

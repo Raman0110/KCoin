@@ -26,11 +26,12 @@ export default function DashboardPage() {
   async function handleSendTransaction() {
     if (isSending) return;
     setIsSending(true);
-    if (sendForm.recipientAddress === walletDetail?.walletAddress)
-      return toast.error("You cannot send KCoin to your own wallet address")
 
     if (sendForm.recipientAddress && sendForm.amount) {
       try {
+        if (sendForm.recipientAddress === walletDetail?.walletAddress) {
+          throw new Error("You cannot send KCoin to your own wallet address")
+        }
         const response = await transactionAPI.createTransaction({ recipientAddress: sendForm.recipientAddress, amount: Number(sendForm.amount) });
         if (response.success) {
           setTriggerFetch((prev) => prev + 1);
