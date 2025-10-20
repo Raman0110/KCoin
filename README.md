@@ -251,7 +251,7 @@ POST /block/mine
 ## Project Structure
 
 ```
-kcoin-blockchain/
+kcoin/
 ├── src/
 │   ├── config/
 │   │   └── db.config.ts          # Database configuration
