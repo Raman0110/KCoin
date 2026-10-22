@@ -8,6 +8,12 @@ import { AuthenticatedRequest } from "../block/block.types";
 export class UserController {
   constructor(private userService: UserService) { }
 
+  private readonly authCookieOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax" as const,
+  };
+
   createUser = async (req: Request, res: Response) => {
     try {
       const userPayload = req.body;
@@ -35,9 +41,8 @@ export class UserController {
 
       res.cookie('token', token,
         {
+          ...this.authCookieOptions,
           maxAge: 3600000,
-          httpOnly: true,
-          secure: false
         }).json({
           success: true,
           message: "Login successful"
@@ -73,9 +78,7 @@ export class UserController {
   logout = async (req: Request, res: Response) => {
     try {
       res.clearCookie("token", {
-        httpOnly: true,
-        secure: false,
-        sameSite: "strict",
+        ...this.authCookieOptions,
       });
 
       res.status(200).json({ success: true, message: "Logged out successfully" });

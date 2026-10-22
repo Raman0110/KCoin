@@ -11,7 +11,9 @@ import type {
   BlockChainResponse
 } from '@/types';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+// Keep API requests on the frontend origin. Next.js proxies /api to the backend,
+// allowing authentication cookies to be read by both the browser and middleware.
+const API_BASE_URL = '/api';
 
 export const getErrorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : 'An unexpected error occurred';
