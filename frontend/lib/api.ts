@@ -13,6 +13,21 @@ import type {
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
+export const getErrorMessage = (error: unknown): string =>
+  error instanceof Error ? error.message : 'An unexpected error occurred';
+
+class APIError extends Error {
+  status: number;
+  payload: unknown;
+
+  constructor(message: string, status: number, payload: unknown) {
+    super(message);
+    this.name = 'APIError';
+    this.status = status;
+    this.payload = payload;
+  }
+}
+
 const fetchAPI = async (url: string, options: RequestInit = {}) => {
   const response = await fetch(`${API_BASE_URL}${url}`, {
     credentials: 'include',
@@ -28,10 +43,7 @@ const fetchAPI = async (url: string, options: RequestInit = {}) => {
 
   if (!response.ok) {
     const errMessage = payload?.message || response.statusText || 'API Error';
-    const err: any = new Error(errMessage);
-    err.status = response.status;
-    err.payload = payload;
-    throw err;
+    throw new APIError(errMessage, response.status, payload);
   }
 
   return payload;

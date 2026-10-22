@@ -1,8 +1,8 @@
 "use client"
 import React, { useEffect, useState } from 'react';
-import { Wallet, TrendingUp, ArrowRight, Copy, CheckCircle, Coins } from 'lucide-react';
+import { Wallet, TrendingUp, ArrowRight, Copy, CheckCircle } from 'lucide-react';
 import Header from '@/components/Header';
-import { authAPI, transactionAPI, walletAPI } from '@/lib/api';
+import { authAPI, getErrorMessage, transactionAPI, walletAPI } from '@/lib/api';
 import toast from 'react-hot-toast';
 import { DashboardStat, UserWallet } from '@/types';
 import CoinLoader from '@/components/CoinLoader';
@@ -25,26 +25,27 @@ export default function DashboardPage() {
 
   async function handleSendTransaction() {
     if (isSending) return;
-    setIsSending(true);
 
-    if (sendForm.recipientAddress && sendForm.amount) {
-      try {
-        if (sendForm.recipientAddress === walletDetail?.walletAddress) {
-          throw new Error("You cannot send KCoin to your own wallet address")
-        }
-        const response = await transactionAPI.createTransaction({ recipientAddress: sendForm.recipientAddress, amount: Number(sendForm.amount) });
-        if (response.success) {
-          setTriggerFetch((prev) => prev + 1);
-          toast.success(response.message)
-          setSendForm({ recipientAddress: '', amount: '' })
-        }
-      } catch (error: any) {
-        toast.error(error.message)
-      } finally {
-        setIsSending(false);
-      }
-    } else {
+    if (!sendForm.recipientAddress || !sendForm.amount) {
       toast.error("Enter wallet address and amount")
+      return;
+    }
+
+    setIsSending(true);
+    try {
+      if (sendForm.recipientAddress === walletDetail?.walletAddress) {
+        throw new Error("You cannot send KCoin to your own wallet address")
+      }
+      const response = await transactionAPI.createTransaction({ recipientAddress: sendForm.recipientAddress, amount: Number(sendForm.amount) });
+      if (response.success) {
+        setTriggerFetch((prev) => prev + 1);
+        toast.success(response.message)
+        setSendForm({ recipientAddress: '', amount: '' })
+      }
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error))
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -52,8 +53,8 @@ export default function DashboardPage() {
     try {
       const userDetail = await walletAPI.getWallet();
       setWalletDetail(userDetail);
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error));
     }
   }
 
@@ -61,8 +62,8 @@ export default function DashboardPage() {
     try {
       const dashboardDetail = await authAPI.getDashboardData();
       setDashboardDetail(dashboardDetail)
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error));
     }
   }
 

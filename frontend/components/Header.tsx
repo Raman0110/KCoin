@@ -1,34 +1,26 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { Coins, LogOut } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 import toast from "react-hot-toast";
-import { authAPI } from "@/lib/api";
+import { authAPI, getErrorMessage } from "@/lib/api";
 
 export default function Header() {
   const router = useRouter();
   const pathname = usePathname();
-  const [isLoading, setIsLoading] = useState(false);
-
   const handleLogout = async () => {
     try {
       await authAPI.logout();
       router.push("/login");
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error));
     }
   };
 
-  const navigateTo = async (path: string) => {
+  const navigateTo = (path: string) => {
     if (pathname === path) return;
-    setIsLoading(true);
-    // await new Promise((res) => setTimeout(res, 200));
     router.push(path);
   };
-
-  useEffect(() => {
-    setIsLoading(false);
-  }, [pathname]);
 
   const isActive = (path: string) => pathname === path;
 

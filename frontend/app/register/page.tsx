@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Coins } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { authAPI } from '@/lib/api';
+import { authAPI, getErrorMessage } from '@/lib/api';
 import toast from 'react-hot-toast';
 
 export default function RegisterPage() {
@@ -23,8 +23,8 @@ export default function RegisterPage() {
             toast.success("User Registered Successful")
             router.push('/login');
           }
-        } catch (error: any) {
-          toast.error(error.message)
+        } catch (error: unknown) {
+          toast.error(getErrorMessage(error))
         }
       } else {
         toast.error('Passwords do not match')

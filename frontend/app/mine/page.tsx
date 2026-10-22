@@ -3,7 +3,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Blocks, Loader } from "lucide-react";
 import Header from "@/components/Header";
 import toast from "react-hot-toast";
-import { blockchainAPI, transactionAPI } from "@/lib/api";
+import { blockchainAPI, getErrorMessage, transactionAPI } from "@/lib/api";
 import { Transaction } from "@/types";
 import CoinLoader from "@/components/CoinLoader";
 import MiningOverlay from "@/components/MiningOverlay";
@@ -23,8 +23,8 @@ export default function MinePage() {
       if (response.success) {
         setPendingTransactions(response.pendingTransactions);
       }
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error));
     }
   }
 
@@ -64,8 +64,8 @@ export default function MinePage() {
 
       await Promise.all([apiCall, simulatedDelay]);
       toast.success("Block mined successfully! You earned 10 KCoin as a reward.");
-    } catch (error: any) {
-      toast.error(error?.message || "Mining failed.");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error) || "Mining failed.");
     } finally {
       setProgress(100);
       await new Promise((r) => setTimeout(r, 300));

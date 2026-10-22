@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { Blocks } from 'lucide-react';
 import Header from '@/components/Header';
-import { blockchainAPI } from '@/lib/api';
+import { blockchainAPI, getErrorMessage } from '@/lib/api';
 import toast from 'react-hot-toast';
 import { Block } from '@/types';
 import CoinLoader from '@/components/CoinLoader';
@@ -15,8 +15,8 @@ export default function ExplorerPage() {
     try {
       const response = await blockchainAPI.getChain();
       setChain(response.chain);
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error));
     }
   }
 

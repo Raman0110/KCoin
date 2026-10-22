@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Coins } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { authAPI } from '@/lib/api';
+import { authAPI, getErrorMessage } from '@/lib/api';
 import toast from 'react-hot-toast';
 
 export default function LoginPage() {
@@ -17,8 +17,8 @@ export default function LoginPage() {
           toast.success("Login successful");
           router.push('/dashboard');
         }
-      } catch (error: any) {
-        toast.error(error.message)
+      } catch (error: unknown) {
+        toast.error(getErrorMessage(error))
       }
     }
   };
@@ -65,7 +65,7 @@ export default function LoginPage() {
         </div>
 
         <p className="text-white/60 text-center mt-6">
-          Don't have an account?{' '}
+          Don&apos;t have an account?{' '}
           <button
             onClick={() => router.push('/register')}
             className="cursor-pointer text-yellow-400 hover:text-yellow-300 font-semibold"
