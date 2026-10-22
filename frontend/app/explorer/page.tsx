@@ -1,91 +1,119 @@
 "use client"
-import React, { useEffect, useState } from 'react';
-import { Blocks } from 'lucide-react';
-import Header from '@/components/Header';
-import { blockchainAPI, getErrorMessage } from '@/lib/api';
-import toast from 'react-hot-toast';
-import { Block } from '@/types';
-import CoinLoader from '@/components/CoinLoader';
+
+import React, { useCallback, useEffect, useState } from "react";
+import { Blocks } from "lucide-react";
+import Header from "@/components/Header";
+import PageState from "@/components/PageState";
+import { blockchainAPI, getErrorMessage } from "@/lib/api";
+import toast from "react-hot-toast";
+import { Block } from "@/types";
 
 export default function ExplorerPage() {
   const [chain, setChain] = useState<Block[] | null>(null);
   const [selectedBlock, setSelectedBlock] = useState<Block | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  async function getBlockChain() {
+  const getBlockChain = useCallback(async () => {
+    setIsLoading(true);
+    setLoadError(null);
     try {
       const response = await blockchainAPI.getChain();
       setChain(response.chain);
     } catch (error: unknown) {
-      toast.error(getErrorMessage(error));
+      const message = getErrorMessage(error);
+      setLoadError(message);
+      toast.error(message);
+    } finally {
+      setIsLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
-    getBlockChain();
-  }, []);
+    void getBlockChain();
+  }, [getBlockChain]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-black">
       <Header />
-      <CoinLoader show={!chain} />
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 mb-6">
-          <h2 className="text-2xl font-bold text-white mb-4">Blockchain Explorer</h2>
-          <p className="text-white/60">
-            Explore the entire KCoin blockchain. Each block contains validated transactions and is cryptographically linked to the previous block.
-          </p>
-        </div>
+      <PageState
+        loading={isLoading}
+        error={loadError}
+        loadingMessage="Loading the blockchain — the server may take a moment to wake up..."
+        onRetry={() => void getBlockChain()}
+      />
 
-        <div className="space-y-4">
-          {chain?.map((block) => (
-            <div
-              key={block.index}
-              className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 cursor-pointer hover:border-amber-300"
-              onClick={() => setSelectedBlock(block)}
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <Blocks className="w-5 h-5 text-yellow-400" />
-                    <h3 className="text-xl font-bold text-white">Block #{block.index}</h3>
-                  </div>
-                  <p className="text-white/60 text-sm">
-                    {new Date(block.timestamp).toLocaleString()}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-white/60 text-sm">Transactions</p>
-                  <p className="text-2xl font-bold text-white">{block.transactions.length}</p>
-                </div>
+      {!isLoading && !loadError && chain && (
+        <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
+          <section className="mb-6 rounded-2xl border border-white/20 bg-white/10 p-5 backdrop-blur-lg sm:p-6">
+            <h2 className="mb-3 text-2xl font-bold text-white sm:text-3xl">Blockchain Explorer</h2>
+            <p className="text-white/60">
+              Explore the entire KCoin blockchain. Each block contains validated transactions and is cryptographically linked to the previous block.
+            </p>
+          </section>
+
+          <div className="space-y-4">
+            {chain.length === 0 && (
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-center text-white/60">
+                No blocks have been mined yet.
               </div>
-            </div>
-          ))}
-        </div>
-      </div>
+            )}
+            {chain.map((block) => (
+              <button
+                type="button"
+                key={block.index}
+                className="w-full cursor-pointer rounded-2xl border border-white/20 bg-white/10 p-5 text-left backdrop-blur-lg transition-colors hover:border-amber-300 sm:p-6"
+                onClick={() => setSelectedBlock(block)}
+              >
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0">
+                    <div className="mb-2 flex items-center gap-2">
+                      <Blocks className="h-5 w-5 shrink-0 text-yellow-400" />
+                      <h3 className="text-xl font-bold text-white">Block #{block.index}</h3>
+                    </div>
+                    <p className="text-sm text-white/60">{new Date(block.timestamp).toLocaleString()}</p>
+                  </div>
+                  <div className="text-left sm:text-right">
+                    <p className="text-sm text-white/60">Transactions</p>
+                    <p className="text-2xl font-bold text-white">{block.transactions.length}</p>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </main>
+      )}
 
       {selectedBlock && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-gray-900 rounded-2xl p-6 max-w-lg w-full relative">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3 backdrop-blur-sm sm:p-6"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Block ${selectedBlock.index} details`}
+        >
+          <div className="relative max-h-[90dvh] w-full max-w-lg overflow-y-auto rounded-2xl border border-white/10 bg-gray-900 p-5 sm:p-6">
             <button
-              className="cursor-pointer absolute top-3 right-3 text-white text-xl font-bold"
+              type="button"
+              aria-label="Close block details"
+              className="absolute right-3 top-3 flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg text-2xl font-bold text-white hover:bg-white/10"
               onClick={() => setSelectedBlock(null)}
             >
               ×
             </button>
 
-            <h3 className="text-xl font-bold text-white mb-4">Block #{selectedBlock.index}</h3>
-            <div className="space-y-2">
-              <div className="flex justify-between text-white/60 mb-4">
+            <h3 className="mb-4 pr-12 text-xl font-bold text-white">Block #{selectedBlock.index}</h3>
+            <div className="space-y-3">
+              <div className="mb-4 flex flex-col gap-1 text-white/60 sm:flex-row sm:justify-between">
                 <span>Timestamp:</span>
                 <span>{new Date(selectedBlock.timestamp).toLocaleString()}</span>
               </div>
-              <div className="flex justify-between text-white/60 break-all">
-                <span className='min-w-[80px]'>Hash:</span>
-                <code>{selectedBlock.hash}</code>
+              <div className="flex flex-col gap-1 break-all text-white/60 sm:flex-row sm:justify-between sm:gap-4">
+                <span className="min-w-[80px]">Hash:</span>
+                <code className="text-left sm:text-right">{selectedBlock.hash}</code>
               </div>
-              <div className="flex justify-between text-white/60 break-all">
+              <div className="flex flex-col gap-1 break-all text-white/60 sm:flex-row sm:justify-between sm:gap-4">
                 <span>Previous Hash:</span>
-                <code>{selectedBlock.previousHash}</code>
+                <code className="text-left sm:text-right">{selectedBlock.previousHash}</code>
               </div>
               {selectedBlock.nonce !== undefined && (
                 <div className="flex justify-between text-white/60">
@@ -96,18 +124,18 @@ export default function ExplorerPage() {
             </div>
 
             {selectedBlock.transactions.length > 0 && (
-              <div className="mt-4">
-                <h4 className="text-white font-semibold mb-2">Transactions:</h4>
-                <div className="max-h-64 overflow-y-auto space-y-2 pr-2">
+              <div className="mt-5">
+                <h4 className="mb-2 font-semibold text-white">Transactions:</h4>
+                <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
                   {selectedBlock.transactions.map((tx) => (
-                    <div key={tx.id} className="bg-white/5 rounded-lg p-3">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-white/60 text-sm">
-                          {tx.senderAddress === '00' ? 'Mining Reward' : `From: ${tx.senderAddress}`}
+                    <div key={tx.id} className="rounded-lg bg-white/5 p-3">
+                      <div className="mb-1 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                        <span className="break-all text-sm text-white/60">
+                          {tx.senderAddress === "00" ? "Mining Reward" : `From: ${tx.senderAddress}`}
                         </span>
-                        <span className="text-yellow-400 font-semibold">{tx.amount} KC</span>
+                        <span className="shrink-0 font-semibold text-yellow-400">{tx.amount} KC</span>
                       </div>
-                      <p className="text-white/60 text-sm">To: {tx.recipientAddress}</p>
+                      <p className="break-all text-sm text-white/60">To: {tx.recipientAddress}</p>
                     </div>
                   ))}
                 </div>

@@ -14,6 +14,7 @@ import type {
 // Keep API requests on the frontend origin. Next.js proxies /api to the backend,
 // allowing authentication cookies to be read by both the browser and middleware.
 const API_BASE_URL = '/api';
+const REQUEST_TIMEOUT_MS = 90_000;
 
 export const getErrorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : 'An unexpected error occurred';
@@ -31,14 +32,31 @@ class APIError extends Error {
 }
 
 const fetchAPI = async (url: string, options: RequestInit = {}) => {
-  const response = await fetch(`${API_BASE_URL}${url}`, {
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(options.headers || {}),
-    },
-    ...options,
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const abortRequest = () => controller.abort();
+  options.signal?.addEventListener('abort', abortRequest, { once: true });
+
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}${url}`, {
+      ...options,
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(options.headers || {}),
+      },
+      signal: controller.signal,
+    });
+  } catch (error: unknown) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error('The server took too long to respond. Please try again.');
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+    options.signal?.removeEventListener('abort', abortRequest);
+  }
 
   const text = await response.text();
   const payload = text ? JSON.parse(text) : null;

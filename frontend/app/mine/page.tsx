@@ -1,177 +1,154 @@
 "use client"
-import React, { useEffect, useRef, useState } from "react";
-import { Blocks, Loader } from "lucide-react";
+
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { Blocks, LoaderCircle } from "lucide-react";
 import Header from "@/components/Header";
+import PageState from "@/components/PageState";
+import MiningOverlay from "@/components/MiningOverlay";
 import toast from "react-hot-toast";
 import { blockchainAPI, getErrorMessage, transactionAPI } from "@/lib/api";
 import { Transaction } from "@/types";
-import CoinLoader from "@/components/CoinLoader";
-import MiningOverlay from "@/components/MiningOverlay";
+
+const MINING_DURATION = 4000;
 
 export default function MinePage() {
   const [isMining, setIsMining] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [pendingTransactions, setPendingTransactions] = useState<Transaction[] | null>(null);
   const [progress, setProgress] = useState(0);
   const progressRef = useRef<number | null>(null);
   const intervalRef = useRef<number | null>(null);
 
-  const MINING_DURATION = 4000;
-
-  async function getPendingTransactions() {
+  const getPendingTransactions = useCallback(async (showLoader = true) => {
+    if (showLoader) setIsLoading(true);
+    setLoadError(null);
     try {
       const response = await transactionAPI.getPendingTransactions();
-      if (response.success) {
-        setPendingTransactions(response.pendingTransactions);
-      }
+      if (response.success) setPendingTransactions(response.pendingTransactions);
     } catch (error: unknown) {
-      toast.error(getErrorMessage(error));
+      const message = getErrorMessage(error);
+      setLoadError(message);
+      toast.error(message);
+    } finally {
+      setIsLoading(false);
     }
-  }
-
-  useEffect(() => {
-    getPendingTransactions();
-    return () => {
-      if (intervalRef.current) window.clearInterval(intervalRef.current);
-    };
   }, []);
 
-  const startMiningProgress = (duration = MINING_DURATION) => {
+  useEffect(() => {
+    void getPendingTransactions();
+    return () => {
+      if (progressRef.current) window.clearTimeout(progressRef.current);
+      if (intervalRef.current) window.clearInterval(intervalRef.current);
+    };
+  }, [getPendingTransactions]);
+
+  const startMiningProgress = () => {
     setProgress(0);
     if (intervalRef.current) window.clearInterval(intervalRef.current);
 
     const start = Date.now();
     intervalRef.current = window.setInterval(() => {
       const elapsed = Date.now() - start;
-      const pct = Math.min(100, Math.round((elapsed / duration) * 100));
+      const pct = Math.min(90, Math.round((elapsed / MINING_DURATION) * 90));
       setProgress(pct);
-      if (pct >= 100 && intervalRef.current) {
-        window.clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
     }, 100);
   };
 
   const handleMine = async () => {
+    if (isMining) return;
     setIsMining(true);
-    startMiningProgress(MINING_DURATION);
+    startMiningProgress();
 
-    const simulatedDelay = new Promise((res) => {
-      progressRef.current = window.setTimeout(res, MINING_DURATION);
+    const minimumDelay = new Promise((resolve) => {
+      progressRef.current = window.setTimeout(resolve, MINING_DURATION);
     });
 
     try {
-      const apiCall = blockchainAPI.mineBlock();
-
-      await Promise.all([apiCall, simulatedDelay]);
-      toast.success("Block mined successfully! You earned 10 KCoin as a reward.");
-    } catch (error: unknown) {
-      toast.error(getErrorMessage(error) || "Mining failed.");
-    } finally {
+      await Promise.all([blockchainAPI.mineBlock(), minimumDelay]);
       setProgress(100);
-      await new Promise((r) => setTimeout(r, 300));
+      toast.success("Block mined successfully! You earned 10 KCoin as a reward.");
+      await new Promise((resolve) => window.setTimeout(resolve, 350));
+      await getPendingTransactions(false);
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error));
+    } finally {
+      if (progressRef.current) window.clearTimeout(progressRef.current);
+      if (intervalRef.current) window.clearInterval(intervalRef.current);
+      progressRef.current = null;
+      intervalRef.current = null;
       setIsMining(false);
       setProgress(0);
-
-      if (progressRef.current) {
-        window.clearTimeout(progressRef.current);
-        progressRef.current = null;
-      }
-      if (intervalRef.current) {
-        window.clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-
-      getPendingTransactions();
     }
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-black">
       <Header />
-      <CoinLoader show={!pendingTransactions} />
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20 text-center relative overflow-hidden">
-          {isMining && (
-            <div
-              aria-hidden
-              className="absolute inset-0 flex items-center justify-center gap-6 pointer-events-none opacity-70"
-            >
-              <Blocks className="w-10 h-10 text-yellow-400 animate-bounce" />
-              <Blocks className="w-10 h-10 text-yellow-400 animate-bounce delay-150" />
-              <Blocks className="w-10 h-10 text-yellow-400 animate-bounce delay-300" />
-            </div>
-          )}
+      <PageState
+        loading={isLoading}
+        error={loadError}
+        loadingMessage="Loading pending transactions — the server may take a moment to wake up..."
+        onRetry={() => void getPendingTransactions()}
+      />
 
-          <Blocks
-            className={`w-16 h-16 text-yellow-400 mx-auto mb-4 transition-transform ${isMining ? "animate-spin" : ""}`}
-          />
-          <h2 className="text-3xl font-bold text-white mb-4">Mine New Block</h2>
-          <p className="text-white/60 mb-8">
-            Mine a new block and earn 10 KCoin as a reward. This process validates pending transactions and adds them to the blockchain.
-          </p>
-
-          <div className="bg-white/5 rounded-lg p-6 mb-6">
-            <div className="grid grid-cols-2 gap-4 text-left">
-              <div>
-                <p className="text-white/60 text-sm mb-1">Pending Transactions</p>
-                <p className="text-2xl font-bold text-white">{pendingTransactions?.length ?? "—"}</p>
-              </div>
-              <div>
-                <p className="text-white/60 text-sm mb-1">Mining Reward</p>
-                <p className="text-2xl font-bold text-yellow-400">10 KC</p>
-              </div>
-            </div>
-          </div>
-
-          <button
-            onClick={handleMine}
-            disabled={isMining || pendingTransactions?.length === 0}
-            className="cursor-pointer bg-gradient-to-r from-yellow-400 to-yellow-500 text-gray-900 font-semibold px-8 py-4 rounded-lg hover:from-yellow-500 hover:to-yellow-600 transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center gap-3 mx-auto relative z-10"
-            aria-disabled={isMining}
-          >
-            {isMining ? (
-              <>
-                <Loader className="w-6 h-6 animate-spin" />
-                Mining in Progress...
-              </>
-            ) : (
-              <>
-                <Blocks className="w-6 h-6" />
-                Start Mining
-              </>
-            )}
-          </button>
-
-          {isMining && (
-            <p className="text-white/60 mt-4 text-sm relative z-10">
-              Finding the correct nonce... This may take a few seconds.
+      {!isLoading && !loadError && pendingTransactions && (
+        <main className="mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-8">
+          <section className="relative overflow-hidden rounded-2xl border border-white/20 bg-white/10 p-5 text-center backdrop-blur-lg sm:p-8">
+            <Blocks className={`mx-auto mb-4 h-14 w-14 text-yellow-400 transition-transform sm:h-16 sm:w-16 ${isMining ? "animate-spin" : ""}`} />
+            <h2 className="mb-4 text-2xl font-bold text-white sm:text-3xl">Mine New Block</h2>
+            <p className="mx-auto mb-7 max-w-2xl text-sm leading-6 text-white/60 sm:text-base">
+              Mine a new block and earn 10 KCoin as a reward. This process validates pending transactions and adds them to the blockchain.
             </p>
-          )}
-        </div>
 
-        <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 mt-6 relative z-0">
-          <h3 className="text-xl font-semibold text-white mb-4">Pending Transactions</h3>
-
-          {pendingTransactions?.length === 0 ? (
-            <p className="text-white/60 text-center py-8">No pending transactions</p>
-          ) : (
-            <div className="space-y-3">
-              {pendingTransactions?.map((tx) => (
-                <div key={tx.id} className="bg-white/5 rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-white/60 text-sm">Transaction ID: {tx.id}</span>
-                    <span className="text-yellow-400 font-semibold">{tx.amount} KC</span>
-                  </div>
-                  <div className="text-sm text-white/60">
-                    <p>From: {tx.senderAddress}</p>
-                    <p>To: {tx.recipientAddress}</p>
-                  </div>
+            <div className="mb-6 rounded-lg bg-white/5 p-4 sm:p-6">
+              <div className="grid grid-cols-1 gap-4 text-left min-[420px]:grid-cols-2">
+                <div>
+                  <p className="mb-1 text-sm text-white/60">Pending Transactions</p>
+                  <p className="text-2xl font-bold text-white">{pendingTransactions.length}</p>
                 </div>
-              ))}
+                <div>
+                  <p className="mb-1 text-sm text-white/60">Mining Reward</p>
+                  <p className="text-2xl font-bold text-yellow-400">10 KC</p>
+                </div>
+              </div>
             </div>
-          )}
-        </div>
-      </div>
+
+            <button
+              type="button"
+              onClick={handleMine}
+              disabled={isMining || pendingTransactions.length === 0}
+              className="relative z-10 mx-auto flex min-h-12 w-full cursor-pointer items-center justify-center gap-3 rounded-lg bg-gradient-to-r from-yellow-400 to-yellow-500 px-8 py-3 font-semibold text-gray-900 transition-all hover:from-yellow-500 hover:to-yellow-600 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+            >
+              {isMining ? <LoaderCircle className="h-6 w-6 animate-spin" /> : <Blocks className="h-6 w-6" />}
+              {isMining ? "Mining in progress..." : pendingTransactions.length === 0 ? "No transactions to mine" : "Start Mining"}
+            </button>
+          </section>
+
+          <section className="mt-6 rounded-2xl border border-white/20 bg-white/10 p-5 backdrop-blur-lg sm:p-6">
+            <h3 className="mb-4 text-xl font-semibold text-white">Pending Transactions</h3>
+
+            {pendingTransactions.length === 0 ? (
+              <p className="py-8 text-center text-white/60">No pending transactions</p>
+            ) : (
+              <div className="space-y-3">
+                {pendingTransactions.map((tx) => (
+                  <div key={tx.id} className="rounded-lg bg-white/5 p-4">
+                    <div className="mb-2 flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+                      <span className="break-all text-sm text-white/60">Transaction ID: {tx.id}</span>
+                      <span className="shrink-0 font-semibold text-yellow-400">{tx.amount} KC</span>
+                    </div>
+                    <div className="space-y-1 break-all text-sm text-white/60">
+                      <p>From: {tx.senderAddress}</p>
+                      <p>To: {tx.recipientAddress}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        </main>
+      )}
 
       {isMining && <MiningOverlay progress={progress} />}
     </div>

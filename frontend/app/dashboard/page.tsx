@@ -1,11 +1,11 @@
 "use client"
-import React, { useEffect, useState } from 'react';
-import { Wallet, TrendingUp, ArrowRight, Copy, CheckCircle } from 'lucide-react';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Wallet, TrendingUp, ArrowRight, Copy, CheckCircle, LoaderCircle } from 'lucide-react';
 import Header from '@/components/Header';
 import { authAPI, getErrorMessage, transactionAPI, walletAPI } from '@/lib/api';
 import toast from 'react-hot-toast';
 import { DashboardStat, UserWallet } from '@/types';
-import CoinLoader from '@/components/CoinLoader';
+import PageState from '@/components/PageState';
 
 
 export default function DashboardPage() {
@@ -13,15 +13,38 @@ export default function DashboardPage() {
   const [sendForm, setSendForm] = useState({ recipientAddress: '', amount: '' });
   const [walletDetail, setWalletDetail] = useState<UserWallet | null>(null);
   const [dashboardDetail, setDashboardDetail] = useState<DashboardStat | null>(null);
-  const [triggerFetch, setTriggerFetch] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
 
-
-  const copyAddress = () => {
-    navigator.clipboard.writeText(walletDetail?.walletAddress as string);
-    setCopiedAddress(true);
-    setTimeout(() => setCopiedAddress(false), 2000);
+  const copyAddress = async () => {
+    if (!walletDetail?.walletAddress) return;
+    try {
+      await navigator.clipboard.writeText(walletDetail.walletAddress);
+      setCopiedAddress(true);
+      setTimeout(() => setCopiedAddress(false), 2000);
+    } catch {
+      toast.error("Unable to copy the wallet address");
+    }
   };
+
+  const loadDashboard = useCallback(async (showLoader = true) => {
+    if (showLoader) setIsLoading(true);
+    setLoadError(null);
+
+    try {
+      const [userDetail, stats] = await Promise.all([
+        walletAPI.getWallet(),
+        authAPI.getDashboardData(),
+      ]);
+      setWalletDetail(userDetail);
+      setDashboardDetail(stats);
+    } catch (error: unknown) {
+      setLoadError(getErrorMessage(error));
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   async function handleSendTransaction() {
     if (isSending) return;
@@ -38,9 +61,9 @@ export default function DashboardPage() {
       }
       const response = await transactionAPI.createTransaction({ recipientAddress: sendForm.recipientAddress, amount: Number(sendForm.amount) });
       if (response.success) {
-        setTriggerFetch((prev) => prev + 1);
         toast.success(response.message)
         setSendForm({ recipientAddress: '', amount: '' })
+        await loadDashboard(false);
       }
     } catch (error: unknown) {
       toast.error(getErrorMessage(error))
@@ -49,37 +72,24 @@ export default function DashboardPage() {
     }
   };
 
-  async function getWalletDetails() {
-    try {
-      const userDetail = await walletAPI.getWallet();
-      setWalletDetail(userDetail);
-    } catch (error: unknown) {
-      toast.error(getErrorMessage(error));
-    }
-  }
-
-  async function getDashboardData() {
-    try {
-      const dashboardDetail = await authAPI.getDashboardData();
-      setDashboardDetail(dashboardDetail)
-    } catch (error: unknown) {
-      toast.error(getErrorMessage(error));
-    }
-  }
-
   useEffect(() => {
-    getWalletDetails();
-    getDashboardData();
-  }, [triggerFetch])
+    void loadDashboard();
+  }, [loadDashboard])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-black">
       <Header />
-      <CoinLoader show={!walletDetail || !dashboardDetail} />
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      <PageState
+        loading={isLoading}
+        error={loadError}
+        loadingMessage="Loading your wallet — the server may take a moment to wake up..."
+        onRetry={() => void loadDashboard()}
+      />
+      {!isLoading && !loadError && walletDetail && dashboardDetail && (
+      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           {/* Wallet Info */}
-          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20">
+          <section className="rounded-2xl border border-white/20 bg-white/10 p-5 backdrop-blur-lg sm:p-6">
             <div className="flex items-center mb-4">
               <Wallet className="w-6 h-6 text-yellow-400 mr-2" />
               <h2 className="text-xl font-semibold text-white">Your Wallet</h2>
@@ -87,13 +97,15 @@ export default function DashboardPage() {
 
             <div className="mb-4">
               <p className="text-white/60 text-sm mb-2">Wallet Address</p>
-              <div className="flex items-center gap-2">
-                <code className="text-white bg-white/5 px-3 py-2 rounded-lg flex-1 text-sm">
+              <div className="flex min-w-0 items-center gap-2">
+                <code className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap rounded-lg bg-white/5 px-3 py-2 text-sm text-white" title={walletDetail.walletAddress}>
                   {walletDetail?.walletAddress}
                 </code>
                 <button
+                  type="button"
                   onClick={copyAddress}
-                  className="p-2 bg-white/5 hover:bg-white/10 rounded-lg transition-colors"
+                  aria-label="Copy wallet address"
+                  className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-lg bg-white/5 transition-colors hover:bg-white/10"
                 >
                   {copiedAddress ? (
                     <CheckCircle className="w-5 h-5 text-green-400" />
@@ -108,10 +120,10 @@ export default function DashboardPage() {
               <p className="text-white/60 text-sm mb-2">Balance</p>
               <p className="text-4xl font-bold text-yellow-400">{walletDetail?.balance} KC</p>
             </div>
-          </div>
+          </section>
 
           {/* Quick Stats */}
-          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20">
+          <section className="rounded-2xl border border-white/20 bg-white/10 p-5 backdrop-blur-lg sm:p-6">
             <div className="flex items-center mb-4">
               <TrendingUp className="w-6 h-6 text-green-400 mr-2" />
               <h2 className="text-xl font-semibold text-white">Network Stats</h2>
@@ -133,11 +145,11 @@ export default function DashboardPage() {
                 <p className="text-2xl font-bold text-yellow-400">10 KC</p>
               </div>
             </div>
-          </div>
+          </section>
         </div>
 
         {/* Send Transaction */}
-        <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20">
+        <section className="rounded-2xl border border-white/20 bg-white/10 p-5 backdrop-blur-lg sm:p-6">
           <h2 className="text-xl font-semibold text-white mb-4">Send KCoin</h2>
 
           <div className="space-y-4">
@@ -147,7 +159,9 @@ export default function DashboardPage() {
                 type="text"
                 value={sendForm.recipientAddress}
                 onChange={(e) => setSendForm({ ...sendForm, recipientAddress: e.target.value })}
-                className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-yellow-400"
+                disabled={isSending}
+                autoComplete="off"
+                className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white placeholder-white/40 focus:border-yellow-400 focus:outline-none disabled:opacity-60"
                 placeholder="KC-xxxxxxxxxx"
               />
             </div>
@@ -157,24 +171,27 @@ export default function DashboardPage() {
               <input
                 type="number"
                 step="0.01"
+                min="0.01"
                 value={sendForm.amount}
                 onChange={(e) => setSendForm({ ...sendForm, amount: e.target.value })}
                 placeholder="0.00"
-                className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-yellow-400"
+                disabled={isSending}
+                className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white placeholder-white/40 focus:border-yellow-400 focus:outline-none disabled:opacity-60"
               />
             </div>
 
             <button
               disabled={isSending}
               onClick={handleSendTransaction}
-              className="cursor-pointer bg-gradient-to-r from-yellow-400 to-yellow-500 text-gray-900 font-semibold px-6 py-3 rounded-lg hover:from-yellow-500 hover:to-yellow-600 transition-all transform hover:scale-105 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+              className="flex min-h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-yellow-400 to-yellow-500 px-6 py-3 font-semibold text-gray-900 transition-all hover:from-yellow-500 hover:to-yellow-600 disabled:cursor-wait disabled:opacity-60 sm:w-auto"
             >
-              Send Transaction
-              <ArrowRight className="w-5 h-5" />
+              {isSending ? <LoaderCircle className="h-5 w-5 animate-spin" /> : <ArrowRight className="h-5 w-5" />}
+              {isSending ? "Sending..." : "Send Transaction"}
             </button>
           </div>
-        </div>
-      </div>
+        </section>
+      </main>
+      )}
     </div>
   );
 }
